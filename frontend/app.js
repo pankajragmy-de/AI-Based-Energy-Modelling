@@ -116,14 +116,34 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const meta = COMPONENT_META[type] || { desc: '' };
         
+        // Define thermodynamic physics ports
+        const PORT_CONFIGS = {
+            'solar': [{pos: 'right', type: 'elec', tooltip: 'Power Output'}],
+            'wind': [{pos: 'right', type: 'elec', tooltip: 'Power Output'}],
+            'load': [{pos: 'left', type: 'elec', tooltip: 'Power Demand'}],
+            'battery': [{pos: 'left', type: 'elec', tooltip: 'Charge'}, {pos: 'right', type: 'elec', tooltip: 'Discharge'}],
+            'node': [{pos: 'left', type: 'elec'}, {pos: 'right', type: 'elec'}, {pos: 'top', type: 'elec'}, {pos: 'bottom', type: 'elec'}],
+            'mtress_hp': [{pos: 'left', type: 'elec', tooltip: 'Power In'}, {pos: 'bottom', type: 'ambient', tooltip: 'Cold Source'}, {pos: 'right', type: 'heat', tooltip: 'Heat Out'}],
+            'mtress_chp': [{pos: 'left', type: 'gas', tooltip: 'Fuel In'}, {pos: 'top', type: 'elec', tooltip: 'Power Out'}, {pos: 'right', type: 'heat', tooltip: 'Heat Out'}, {pos: 'bottom', type: 'emissions', tooltip: 'CO2'}],
+            'mtress_tes': [{pos: 'left', type: 'heat', tooltip: 'Charge'}, {pos: 'right', type: 'heat', tooltip: 'Discharge'}],
+            'mtress_st': [{pos: 'right', type: 'heat', tooltip: 'Heat Out'}],
+            'amiris': [{pos: 'top', type: 'market', tooltip: 'Market Signal'}],
+            'flexigis': [{pos: 'bottom', type: 'elec', tooltip: 'Grid Connection'}],
+            'electrolyzer': [{pos: 'left', type: 'elec', tooltip: 'Power In'}, {pos: 'bottom', type: 'water', tooltip: 'Water In'}, {pos: 'right', type: 'hydrogen', tooltip: 'H2 Out'}, {pos: 'top', type: 'heat', tooltip: 'Waste Heat'}],
+        };
+        
+        const ports = PORT_CONFIGS[type] || [{pos: 'right', type: 'elec'}];
+        let portsHTML = '';
+        ports.forEach(p => {
+            const tTip = p.tooltip ? `title="${p.tooltip}"` : '';
+            portsHTML += `<div class="port ${p.pos} ${p.type}" data-node="${id}" data-pos="${p.pos}" ${tTip}></div>`;
+        });
+        
         el.innerHTML = `
             <div class="canvas-tooltip">${meta.desc}</div>
             <i class="${getIconClass(type)}"></i>
             <span class="label">${nodeObj.data.label}</span>
-            <div class="port top" data-node="${id}" data-pos="top"></div>
-            <div class="port bottom" data-node="${id}" data-pos="bottom"></div>
-            <div class="port left" data-node="${id}" data-pos="left"></div>
-            <div class="port right" data-node="${id}" data-pos="right"></div>
+            ${portsHTML}
         `;
         
         // Node Dragging

@@ -51,12 +51,27 @@ async def solve_network(state: CanvasState):
         # For simplicity, we'll create a single "AC" bus and attach everything to it 
         # for a nodal copper-plate balance, OR we map the UI directly.
         # Let's map the UI exactly: Every node on canvas is a PyPSA Bus.
+        
+        CAPITAL_COSTS = {
+            "solar": 400000, # €/MW
+            "wind": 1000000,
+            "battery": 300000,
+            "mtress_hp": 800000,
+            "mtress_chp": 1500000,
+            "mtress_st": 200000,
+            "mtress_tes": 50000,
+            "electrolyzer": 1200000,
+        }
+        
+        total_capex = 0.0
+        
         for n in state.nodes:
             # We map every visual node to a PyPSA bus for geometric routing
             network.add("Bus", n.id, carrier="AC")
 
             # Default capacity handling
             cap = float(n.data.capacity)
+            total_capex += cap * CAPITAL_COSTS.get(n.type, 0.0)
 
             # Assign specific PyPSA components based on type
             if n.type in ["solar", "wind"]:
@@ -138,7 +153,8 @@ async def solve_network(state: CanvasState):
         network.optimize(solver_name='highs')
 
         # 5. Extract Results
-        total_cost = network.objective / 1e6 # Convert to Millions
+        total_opex = network.objective
+        total_cost = (total_capex + total_opex) / 1e6 # Convert to Millions
         
         # Generation mix extraction
         mix = {"Solar": 0.0, "Wind": 0.0, "Storage": 0.0, "Grid/Other": 0.0}
