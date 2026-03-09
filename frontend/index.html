@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meta Energy Modeling Framework</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darker: '#0A0A0B',
+                        dark: '#121214',
+                        panel: '#1E1E22',
+                        accent: '#4FD1C5',
+                        oemof: '#F59E0B',
+                        pypsa: '#3B82F6',
+                        remix: '#EF4444',
+                        fine: '#10B981'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="styles.css">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-darker text-white font-sans h-screen w-screen overflow-hidden flex flex-col">
+
+    <!-- Navbar -->
+    <header class="h-16 bg-dark border-b border-gray-800 flex items-center justify-between px-6 shrink-0 z-20">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-blue-500 flex items-center justify-center shadow-lg shadow-accent/20">
+                <i class="fa-solid fa-bolt text-white text-sm"></i>
+            </div>
+            <h1 class="font-bold text-xl tracking-tight">Meta<span class="text-accent font-light">Energy</span></h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="text-sm text-gray-400 font-medium px-3 py-1 bg-panel rounded-full border border-gray-700">
+                <i class="fa-solid fa-cloud-arrow-down mr-1"></i> UCDM Engine v1.0
+            </div>
+            <button id="runBtn" class="bg-accent hover:bg-teal-400 text-darker font-semibold py-2 px-6 rounded-full transition-all hover:scale-105 hover:shadow-[0_0_15px_rgba(79,209,197,0.4)] flex items-center gap-2">
+                <i class="fa-solid fa-play text-xs"></i> Execute Pipeline
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="flex flex-1 overflow-hidden relative">
+        
+        <!-- Left Sidebar: Component Pallette -->
+        <aside class="w-64 bg-dark border-r border-gray-800 p-4 shrink-0 flex flex-col gap-6 z-10 sidebar-shadow">
+            <div>
+                <h2 class="text-xs uppercase text-gray-500 font-bold tracking-wider mb-3">Nodes</h2>
+                <div class="space-y-2">
+                    <div class="component-item border-l-4 border-gray-400" draggable="true" data-type="node">
+                        <i class="fa-solid fa-circle-dot text-gray-400 w-5"></i> Region / Bus
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h2 class="text-xs uppercase text-gray-500 font-bold tracking-wider mb-3">Generators</h2>
+                <div class="space-y-2">
+                    <div class="component-item border-l-4 border-yellow-400" draggable="true" data-type="solar">
+                        <i class="fa-regular fa-sun text-yellow-400 w-5"></i> Solar PV
+                    </div>
+                    <div class="component-item border-l-4 border-blue-400" draggable="true" data-type="wind">
+                        <i class="fa-solid fa-wind text-blue-400 w-5"></i> Wind Turbine
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h2 class="text-xs uppercase text-gray-500 font-bold tracking-wider mb-3">Loads & Storage</h2>
+                <div class="space-y-2">
+                    <div class="component-item border-l-4 border-red-400" draggable="true" data-type="load" title="Consumer Demand Profile">
+                        <i class="fa-solid fa-city text-red-400 w-5"></i> Urban Demand
+                    </div>
+                    <div class="component-item border-l-4 border-green-400" draggable="true" data-type="battery" title="Electrical Energy Storage">
+                        <i class="fa-solid fa-battery-half text-green-400 w-5"></i> Li-Ion Battery
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h2 class="text-xs uppercase text-gray-500 font-bold tracking-wider mb-3">Sector Coupling & DLR Tools</h2>
+                <div class="space-y-2">
+                    <div class="component-item border-l-4 border-purple-400" draggable="true" data-type="electrolyzer" title="Power-to-Gas (Hydrogen)">
+                        <i class="fa-solid fa-water text-purple-400 w-5"></i> H2 Electrolyzer
+                    </div>
+                    <div class="component-item border-l-4 border-orange-400" draggable="true" data-type="heatpump" title="Power-to-Heat (TESPy/OEMOF.thermal)">
+                        <i class="fa-solid fa-fire-burner text-orange-400 w-5"></i> Heat Pump
+                    </div>
+                    <div class="component-item border-l-4 border-indigo-400" draggable="true" data-type="amiris" title="DLR AMIRIS Market Agent">
+                        <i class="fa-solid fa-money-bill-trend-up text-indigo-400 w-5"></i> Market Agent
+                    </div>
+                    <div class="component-item border-l-4 border-pink-400" draggable="true" data-type="mtress" title="DLR MTRESS Generic Node">
+                        <i class="fa-solid fa-cubes text-pink-400 w-5"></i> MTRESS Plant
+                    </div>
+                    <div class="component-item border-l-4 border-teal-400" draggable="true" data-type="flexigis" title="DLR FlexiGIS Synthetic Grid Node">
+                        <i class="fa-solid fa-map-location-dot text-teal-400 w-5"></i> FlexiGIS Node
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-auto pt-4 border-t border-gray-800">
+                <h2 class="text-xs uppercase text-gray-500 font-bold tracking-wider mb-3">Target Framework</h2>
+                <select id="frameworkSelect" class="w-full bg-panel border border-gray-700 text-sm rounded-lg p-2.5 focus:border-accent focus:ring-1 focus:ring-accent outline-none appearance-none cursor-pointer">
+                    <option value="pypsa">PyPSA (Grid Optimization)</option>
+                    <option value="oemof">OEMOF (Sector Coupling)</option>
+                    <option value="fine">FINE (Investment Path)</option>
+                    <option value="remix">REMix (Macro System)</option>
+                </select>
+            </div>
+        </aside>
+
+        <!-- Center Canvas -->
+        <main class="flex-1 relative bg-darker" id="canvas-container">
+            <div id="grid-background"></div>
+            <svg id="canvas-svg" class="absolute inset-0 w-full h-full pointer-events-none z-0"></svg>
+            <div id="canvas" class="absolute inset-0 w-full h-full overflow-hidden z-10">
+                <!-- Dropped nodes will appear here -->
+                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center text-gray-600 pointer-events-none" id="empty-state">
+                    <i class="fa-solid fa-diagram-project text-5xl mb-4 opacity-50"></i>
+                    <p class="text-lg">Drag components here to build your UCDM.</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Sidebar: Properties & Dashboard -->
+        <aside class="w-80 bg-dark border-l border-gray-800 flex flex-col shrink-0 z-10 transition-transform duration-300" id="right-sidebar">
+            
+            <!-- Tabs -->
+            <div class="flex border-b border-gray-800">
+                <button class="flex-1 py-3 text-sm font-semibold border-b-2 border-accent text-accent" id="tab-properties">Properties</button>
+                <button class="flex-1 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-white" id="tab-results">Results</button>
+            </div>
+
+            <!-- Properties Panel -->
+            <div id="panel-properties" class="p-4 overflow-y-auto flex-1 h-full">
+                <div class="text-center text-gray-500 mt-10" id="no-selection">
+                    Select a node to edit properties.
+                </div>
+                <!-- Dynamic form injected by JS -->
+                <form id="properties-form" class="hidden space-y-4">
+                    <!-- Example inputs-->
+                </form>
+            </div>
+
+            <!-- Results Panel -->
+            <div id="panel-results" class="p-4 overflow-y-auto flex-1 hidden h-full flex flex-col">
+                <div id="results-empty" class="text-center text-gray-500 mt-10">
+                    Run the pipeline to view results.
+                </div>
+                
+                <div id="results-content" class="hidden flex-col gap-6 h-full pb-10">
+                    <div class="bg-panel rounded-lg p-4 border border-gray-700">
+                        <h3 class="text-xs uppercase text-gray-500 font-bold mb-2">Total System Cost</h3>
+                        <div class="text-2xl font-light text-white" id="res-cost">€0.00 M</div>
+                    </div>
+                    
+                    <div class="flex-1 bg-panel rounded-lg p-4 border border-gray-700 min-h-[200px]">
+                        <h3 class="text-xs uppercase text-gray-500 font-bold mb-4">Generation Mix</h3>
+                        <canvas id="mixChart"></canvas>
+                    </div>
+
+                    <!-- Attribution Box -->
+                    <div class="bg-gray-800/50 rounded-lg p-3 border border-gray-700 text-xs text-gray-400">
+                        <div class="flex items-center gap-2 text-accent font-semibold mb-1">
+                            <i class="fa-solid fa-shield-halved"></i> Attribution
+                        </div>
+                        <p id="res-attribution-text">Compiled via Meta Framework.</p>
+                    </div>
+                </div>
+            </div>
+            
+        </aside>
+
+    </div>
+
+    <!-- Execution Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-darker/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="w-16 h-16 border-4 border-gray-800 border-t-accent rounded-full animate-spin mb-6 shadow-[0_0_15px_rgba(79,209,197,0.5)]"></div>
+        <h2 class="text-2xl font-light tracking-wide">Compiling UCDM...</h2>
+        <p class="text-gray-400 mt-2" id="loading-text">Translating to PyPSA Models</p>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
