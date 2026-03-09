@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let chartInstance = null;
     let propChartInstance = null;
+    let dispatchChartInstance = null;
 
     const COMPONENT_META = {
         'node': { desc: 'Creates a standard electrical bus or region to which other components connect. Ensures power balance (sum of inputs = sum of outputs).' },
