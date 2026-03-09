@@ -4,3 +4,4 @@ pypsa
 pandas
 pydantic
 highspy
+numpy

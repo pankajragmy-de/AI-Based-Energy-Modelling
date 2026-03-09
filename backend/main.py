@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from typing import List, Dict, Any, Union
 import pypsa
 import pandas as pd
+import numpy as np
 import highspy # fast solver
 
 app = FastAPI(title="MetaEnergy Optimization API")
@@ -43,7 +44,26 @@ async def solve_network(state: CanvasState):
     try:
         # 1. Initialize empty PyPSA Network
         network = pypsa.Network()
-        network.set_snapshots(range(1)) # Single snapshot for simple testing
+        
+        # Phase 9: 8760-Hour Real-Time Dynamic Simulation
+        snapshots = pd.date_range("2026-01-01", periods=8760, freq="h")
+        network.set_snapshots(snapshots)
+        
+        # --- Generate Mock 8760 Time-Series Profiles ---
+        # 1. Solar: Bell curve peaking midday, 0 at night.
+        hours = np.arange(8760)
+        daily_hours = hours % 24
+        # Peak at noon (12), drop to 0 before 6am and after 6pm. Add some random noise.
+        solar_profile = np.clip(np.sin((daily_hours - 6) * np.pi / 12), 0, 1) 
+        solar_profile = solar_profile * np.random.uniform(0.7, 1.0, 8760)
+        
+        # 2. Wind: Noisy oscillation, higher in winter/spring
+        seasonal_wind = 0.6 + 0.4 * np.cos((hours - 8760/4) * 2 * np.pi / 8760)
+        wind_profile = np.clip(seasonal_wind * np.random.uniform(0.1, 1.2, 8760), 0, 1)
+        
+        # 3. Demand: Double hump "duck curve" (Morning and Evening peaks)
+        demand_profile = 0.4 + 0.3 * np.exp(-0.5 * ((daily_hours - 8) / 2)**2) + 0.5 * np.exp(-0.5 * ((daily_hours - 19) / 3)**2)
+        demand_profile = demand_profile * np.random.uniform(0.9, 1.1, 8760)
 
         # 2. Add Buses (Nodes)
         # In this simple translation, we treat all UI components as attaching to their own bus,
@@ -74,24 +94,17 @@ async def solve_network(state: CanvasState):
             total_capex += cap * CAPITAL_COSTS.get(n.type, 0.0)
 
             # Assign specific PyPSA components based on type
-            if n.type in ["solar", "wind"]:
-                # Generator
-                network.add(
-                    "Generator",
-                    f"Gen_{n.id}",
-                    bus=n.id,
-                    carrier=n.type,
-                    p_nom=cap,
-                    p_max_pu=1.0 if n.type == "solar" else 0.8,
-                    marginal_cost=0.01 # Near zero marginal cost for renewables
-                )
+            if n.type == "solar":
+                network.add("Generator", f"Gen_{n.id}", bus=n.id, carrier="solar", p_nom=cap, p_max_pu=solar_profile, marginal_cost=0.01)
+            elif n.type == "wind":
+                network.add("Generator", f"Gen_{n.id}", bus=n.id, carrier="wind", p_nom=cap, p_max_pu=wind_profile, marginal_cost=0.01)
             elif n.type == "load":
-                # Load
+                # Load (dynamic profile)
                 network.add(
                     "Load",
                     f"Load_{n.id}",
                     bus=n.id,
-                    p_set=cap # fixed demand
+                    p_set=cap * demand_profile # Shape the exact MW size with the normalized duck curve
                 )
             elif n.type in ["battery", "mtress_tes"]:
                 # Storage
@@ -153,32 +166,57 @@ async def solve_network(state: CanvasState):
         network.optimize(solver_name='highs')
 
         # 5. Extract Results
+        # For the Chart.js visualization, returning 8760 points per generator will freeze the browser.
+        # We will extract the first 7 days (168 hours) to show a standard interactive week view.
+        PLOT_HOURS = 168 
+        
         total_opex = network.objective
         total_cost = (total_capex + total_opex) / 1e6 # Convert to Millions
         
-        # Generation mix extraction
+        # Aggregate totals for the doughnut chart (entire year)
         mix = {"Solar": 0.0, "Wind": 0.0, "Storage": 0.0, "Grid/Other": 0.0}
         
+        # Extract Time-Series Array data for the line chart (first 168 hours)
+        timeseries_data = {
+            "hours": [f"H{i}" for i in range(PLOT_HOURS)],
+            "demand": np.zeros(PLOT_HOURS).tolist(),
+            "solar": np.zeros(PLOT_HOURS).tolist(),
+            "wind": np.zeros(PLOT_HOURS).tolist(),
+            "storage_dispatch": np.zeros(PLOT_HOURS).tolist(),
+            "grid_import": np.zeros(PLOT_HOURS).tolist(),
+        }
+        
+        # Calculate Yearly Mix and 168h Time Series
         for gen in network.generators.index:
-            p = network.generators_t.p[gen].iloc[0]
-            if p > 0:
-                carrier = network.generators.loc[gen, "carrier"]
-                if carrier == "solar":
-                    mix["Solar"] += p
-                elif carrier == "wind":
-                    mix["Wind"] += p
-                else:
-                    mix["Grid/Other"] += p
+            p_series = network.generators_t.p[gen]
+            
+            carrier = network.generators.loc[gen, "carrier"]
+            if carrier == "solar":
+                mix["Solar"] += float(p_series.sum())
+                timeseries_data["solar"] = (np.array(timeseries_data["solar"]) + p_series.head(PLOT_HOURS).values).tolist()
+            elif carrier == "wind":
+                mix["Wind"] += float(p_series.sum())
+                timeseries_data["wind"] = (np.array(timeseries_data["wind"]) + p_series.head(PLOT_HOURS).values).tolist()
+            else:
+                mix["Grid/Other"] += float(p_series.sum())
+                timeseries_data["grid_import"] = (np.array(timeseries_data["grid_import"]) + p_series.head(PLOT_HOURS).values).tolist()
 
         for su in network.storage_units.index:
-            p = network.storage_units_t.p[su].iloc[0]
-            if p > 0: # Discharging
-                mix["Storage"] += p
+            p_series = network.storage_units_t.p[su]
+            # Sum positive discharge values for the yearly mix
+            mix["Storage"] += float(p_series[p_series > 0].sum())
+            # For time series, show the net flow (positive = discharge, negative = charge)
+            timeseries_data["storage_dispatch"] = (np.array(timeseries_data["storage_dispatch"]) + p_series.head(PLOT_HOURS).values).tolist()
+            
+        for load in network.loads.index:
+            p_series = network.loads_t.p_set[load]
+            timeseries_data["demand"] = (np.array(timeseries_data["demand"]) + p_series.head(PLOT_HOURS).values).tolist()
 
         return {
             "status": "success",
             "total_system_cost_millions": round(total_cost, 2),
             "generation_mix": mix,
+            "timeseries": timeseries_data,
             "message": "Optimization successful."
         }
 
