@@ -97,33 +97,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // === Commodity Port Definitions per Component Type ===
-    // Each port: { pos, side: 'top'|'bottom'|'left'|'right', commodity, label, dir: 'in'|'out' }
-    const COMPONENT_PORTS = {
-        'node':        [{ side:'left',   commodity:'elec',  label:'Electricity IN',  dir:'in'  }, { side:'right',  commodity:'elec',  label:'Electricity OUT', dir:'out' }],
-        'solar':       [{ side:'bottom', commodity:'elec',  label:'AC Power OUT',    dir:'out' }],
-        'wind':        [{ side:'bottom', commodity:'elec',  label:'AC Power OUT',    dir:'out' }],
-        'load':        [{ side:'top',    commodity:'elec',  label:'Electricity IN',  dir:'in'  }],
-        'battery':     [{ side:'left',   commodity:'elec',  label:'Charge IN',       dir:'in'  }, { side:'right',  commodity:'elec',  label:'Discharge OUT',   dir:'out' }],
-        'electrolyzer':[{ side:'left',   commodity:'elec',  label:'Electricity IN',  dir:'in'  }, { side:'top',    commodity:'water', label:'Water IN',         dir:'in'  }, { side:'right',  commodity:'h2',   label:'Hydrogen OUT', dir:'out' }, { side:'bottom', commodity:'heat', label:'Waste Heat OUT', dir:'out' }],
-        'mtress_hp':   [{ side:'left',   commodity:'elec',  label:'Electricity IN',  dir:'in'  }, { side:'bottom', commodity:'cool',  label:'Ambient Heat IN',  dir:'in'  }, { side:'right',  commodity:'heat',  label:'District Heat OUT', dir:'out' }],
-        'mtress_chp':  [{ side:'left',   commodity:'gas',   label:'Biogas IN',       dir:'in'  }, { side:'top',    commodity:'elec',  label:'Electricity OUT',  dir:'out' }, { side:'right',  commodity:'heat',  label:'Heat OUT',      dir:'out' }, { side:'bottom', commodity:'co2',  label:'CO₂ Exhaust',    dir:'out' }],
-        'mtress_tes':  [{ side:'left',   commodity:'heat',  label:'Heat IN',         dir:'in'  }, { side:'right',  commodity:'heat',  label:'Heat OUT',         dir:'out' }],
-        'mtress_st':   [{ side:'bottom', commodity:'heat',  label:'Thermal Energy OUT', dir:'out'}],
-        'amiris':      [{ side:'left',   commodity:'elec',  label:'Market Power IN', dir:'in'  }, { side:'right',  commodity:'elec',  label:'Market Power OUT', dir:'out' }],
-        'flexigis':    [{ side:'left',   commodity:'elec',  label:'Grid IN',         dir:'in'  }, { side:'right',  commodity:'elec',  label:'Grid OUT',         dir:'out' }],
-    };
-
-    const COMMODITY_COLOR = {
-        'elec':  { bg: '#FBBF24', label: 'Electricity' },
-        'heat':  { bg: '#F87171', label: 'Heat' },
-        'cool':  { bg: '#60A5FA', label: 'Ambient/Cool' },
-        'h2':    { bg: '#C084FC', label: 'Hydrogen' },
-        'gas':   { bg: '#34D399', label: 'Gas/Biogas' },
-        'water': { bg: '#67E8F9', label: 'Water' },
-        'co2':   { bg: '#9CA3AF', label: 'CO₂' },
-    };
-
     // === Canvas Core Logic ===
     function createNode(type, x, y) {
         if(emptyState) emptyState.style.display = 'none';
@@ -138,33 +111,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const el = document.createElement('div');
         el.className = `canvas-node ${getColorClass(type)}`;
         el.id = id;
-        el.style.left = `${x - 55}px`;
-        el.style.top = `${y - 35}px`;
-
-        // Build ports based on commodity definitions
-        const ports = COMPONENT_PORTS[type] || [
-            { side:'left', commodity:'elec', label:'IN', dir:'in' },
-            { side:'right', commodity:'elec', label:'OUT', dir:'out' }
-        ];
-        const portHtml = ports.map(p => {
-            const c = COMMODITY_COLOR[p.commodity] || { bg: '#9CA3AF', label: p.commodity };
-            return `<div class="port port-${p.side} commodity-port"
-                        style="background-color:${c.bg}; box-shadow: 0 0 6px ${c.bg};"
-                        data-node="${id}" data-pos="${p.side}" data-commodity="${p.commodity}" data-dir="${p.dir}"
-                        data-portlabel="${p.label}">
-                        <span class="port-tooltip">${p.label}<br><span style="color:${c.bg}; font-weight:700">${c.label}</span></span>
-                    </div>`;
-        }).join('');
-
+        el.style.left = `${x - 50}px`; // Center offset
+        el.style.top = `${y - 30}px`;
+        
         const meta = COMPONENT_META[type] || { desc: '' };
+        
         el.innerHTML = `
-            <div class="node-tooltip-popup">
-                <strong>${formatLabel(type)}</strong>
-                <p>${meta.desc}</p>
-            </div>
+            <div class="canvas-tooltip">${meta.desc}</div>
             <i class="${getIconClass(type)}"></i>
             <span class="label">${nodeObj.data.label}</span>
-            ${portHtml}
+            <div class="port top" data-node="${id}" data-pos="top"></div>
+            <div class="port bottom" data-node="${id}" data-pos="bottom"></div>
+            <div class="port left" data-node="${id}" data-pos="left"></div>
+            <div class="port right" data-node="${id}" data-pos="right"></div>
         `;
         
         // Node Dragging
