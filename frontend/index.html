@@ -37,15 +37,15 @@
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-darker text-white font-sans h-screen w-screen overflow-hidden flex flex-col">
+<body class="bg-darker text-white font-sans h-screen w-screen overflow-hidden flex flex-col bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-fixed" style="background-color: #05050A;">
 
     <!-- Navbar -->
-    <header class="h-16 bg-dark border-b border-gray-800 flex items-center justify-between px-6 shrink-0 z-20">
+    <header class="h-16 bg-dark/80 backdrop-blur-md border-b border-gray-800 flex items-center justify-between px-6 shrink-0 z-40 relative shadow-md">
         <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-blue-500 flex items-center justify-center shadow-lg shadow-accent/20">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-blue-500 flex items-center justify-center shadow-[0_0_15px_rgba(79,209,197,0.4)]">
                 <i class="fa-solid fa-bolt text-white text-sm"></i>
             </div>
-            <h1 class="font-bold text-xl tracking-tight">Meta<span class="text-accent font-light">Energy</span></h1>
+            <h1 class="font-bold text-xl tracking-tight">Meta<span class="text-accent font-light">Energy</span><span class="text-xs text-gray-400 ml-2 font-mono">PRO</span></h1>
         </div>
         <div class="flex items-center gap-4">
             <div class="text-sm text-gray-400 font-medium px-3 py-1 bg-panel rounded-full border border-gray-700">
@@ -61,64 +61,103 @@
     <div class="flex flex-1 overflow-hidden relative">
         
         <!-- Left Sidebar: Component Pallette -->
-        <aside class="w-64 bg-dark border-r border-gray-800 p-4 shrink-0 flex flex-col gap-6 z-10 sidebar-shadow">
-            <div>
-                <h2 class="text-xs uppercase text-gray-500 font-bold tracking-wider mb-3">Nodes</h2>
-                <div class="space-y-2">
-                    <div class="component-item border-l-4 border-gray-400" draggable="true" data-type="node">
-                        <i class="fa-solid fa-circle-dot text-gray-400 w-5"></i> Region / Bus
+        <aside class="w-72 bg-dark/60 backdrop-blur-xl border-r border-gray-800 p-0 shrink-0 flex flex-col z-30 sidebar-shadow overflow-hidden relative">
+            <div class="p-4 border-b border-gray-800 bg-dark/40 sticky top-0 z-10">
+                <h2 class="text-xs uppercase text-accent font-bold tracking-widest flex items-center gap-2"><i class="fa-solid fa-layer-group"></i> Component Library</h2>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto w-full custom-scrollbar p-3 space-y-1 pb-20">
+                
+                <!-- Open Energy Toolset -->
+                <details class="group bg-panel/40 border border-gray-700/50 rounded-lg overflow-hidden" open>
+                    <summary class="cursor-pointer p-3 text-sm font-semibold flex items-center justify-between hover:bg-panel/80 transition-colors">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-network-wired text-gray-400"></i> Core Grid</span>
+                        <i class="fa-solid fa-chevron-down text-xs text-gray-500 group-open:rotate-180 transition-transform"></i>
+                    </summary>
+                    <div class="p-2 space-y-1 bg-darker/30">
+                        <div class="component-item border-l-4 border-gray-400 flex items-center gap-3" draggable="true" data-type="node" title="Electrical Bus / Network Node">
+                            <i class="fa-solid fa-circle-dot text-gray-400 w-4 text-center"></i> <span class="text-sm">Network Bus</span>
+                        </div>
                     </div>
-                </div>
+                </details>
+
+                <!-- Generators -->
+                <details class="group bg-panel/40 border border-gray-700/50 rounded-lg overflow-hidden" open>
+                    <summary class="cursor-pointer p-3 text-sm font-semibold flex items-center justify-between hover:bg-panel/80 transition-colors">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-plug text-yellow-500"></i> Generators</span>
+                        <i class="fa-solid fa-chevron-down text-xs text-gray-500 group-open:rotate-180 transition-transform"></i>
+                    </summary>
+                    <div class="p-2 space-y-1 bg-darker/30">
+                        <div class="component-item border-l-4 border-yellow-400 flex items-center gap-3" draggable="true" data-type="solar" title="Solar PV Generation Profile">
+                            <i class="fa-regular fa-sun text-yellow-400 w-4 text-center"></i> <span class="text-sm">Solar PV Array</span>
+                        </div>
+                        <div class="component-item border-l-4 border-blue-400 flex items-center gap-3" draggable="true" data-type="wind" title="Wind Turbine Generator">
+                            <i class="fa-solid fa-wind text-blue-400 w-4 text-center"></i> <span class="text-sm">Wind Turbine</span>
+                        </div>
+                    </div>
+                </details>
+
+                <!-- Storage & Demand -->
+                <details class="group bg-panel/40 border border-gray-700/50 rounded-lg overflow-hidden">
+                    <summary class="cursor-pointer p-3 text-sm font-semibold flex items-center justify-between hover:bg-panel/80 transition-colors">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-battery-full text-green-500"></i> Storage & Load</span>
+                        <i class="fa-solid fa-chevron-down text-xs text-gray-500 group-open:rotate-180 transition-transform"></i>
+                    </summary>
+                    <div class="p-2 space-y-1 bg-darker/30">
+                        <div class="component-item border-l-4 border-red-400 flex items-center gap-3" draggable="true" data-type="load" title="Consumer Demand Profile">
+                            <i class="fa-solid fa-city text-red-400 w-4 text-center"></i> <span class="text-sm">Urban Demand</span>
+                        </div>
+                        <div class="component-item border-l-4 border-green-400 flex items-center gap-3" draggable="true" data-type="battery" title="Electrical Energy Storage">
+                            <i class="fa-solid fa-battery-half text-green-400 w-4 text-center"></i> <span class="text-sm">Li-Ion Battery</span>
+                        </div>
+                    </div>
+                </details>
+
+                <!-- DLR MTRESS -->
+                <details class="group bg-panel/40 border border-pink-700/30 rounded-lg overflow-hidden">
+                    <summary class="cursor-pointer p-3 text-sm font-semibold flex items-center justify-between hover:bg-panel/80 transition-colors">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-cubes text-pink-400"></i> DLR MTRESS</span>
+                        <i class="fa-solid fa-chevron-down text-xs text-gray-500 group-open:rotate-180 transition-transform"></i>
+                    </summary>
+                    <div class="p-2 space-y-1 bg-darker/30">
+                        <div class="component-item border-l-4 border-pink-400 flex items-center gap-3" draggable="true" data-type="mtress_hp" title="Air/Ground Source Heat Pump">
+                            <i class="fa-solid fa-fire-burner text-pink-400 w-4 text-center"></i> <span class="text-sm">Heat Pump</span>
+                        </div>
+                        <div class="component-item border-l-4 border-pink-400 flex items-center gap-3" draggable="true" data-type="mtress_chp" title="Combined Heat and Power Engine">
+                            <i class="fa-solid fa-industry text-pink-400 w-4 text-center"></i> <span class="text-sm">CHP Engine</span>
+                        </div>
+                        <div class="component-item border-l-4 border-pink-400 flex items-center gap-3" draggable="true" data-type="mtress_tes" title="Thermal Energy Storage Tank">
+                            <i class="fa-solid fa-database text-pink-400 w-4 text-center"></i> <span class="text-sm">Thermal Storage</span>
+                        </div>
+                        <div class="component-item border-l-4 border-pink-400 flex items-center gap-3" draggable="true" data-type="mtress_st" title="Solar Thermal Collector">
+                            <i class="fa-solid fa-solar-panel text-pink-400 w-4 text-center"></i> <span class="text-sm">Solar Thermal</span>
+                        </div>
+                    </div>
+                </details>
+
+                <!-- Market & GIS -->
+                <details class="group bg-panel/40 border border-indigo-700/30 rounded-lg overflow-hidden">
+                    <summary class="cursor-pointer p-3 text-sm font-semibold flex items-center justify-between hover:bg-panel/80 transition-colors">
+                        <span class="flex items-center gap-2"><i class="fa-solid fa-globe text-indigo-400"></i> Market & GIS</span>
+                        <i class="fa-solid fa-chevron-down text-xs text-gray-500 group-open:rotate-180 transition-transform"></i>
+                    </summary>
+                    <div class="p-2 space-y-1 bg-darker/30">
+                        <div class="component-item border-l-4 border-indigo-400 flex items-center gap-3" draggable="true" data-type="amiris" title="DLR AMIRIS Market Agent">
+                            <i class="fa-solid fa-money-bill-trend-up text-indigo-400 w-4 text-center"></i> <span class="text-sm">AMIRIS Market</span>
+                        </div>
+                        <div class="component-item border-l-4 border-teal-400 flex items-center gap-3" draggable="true" data-type="flexigis" title="DLR FlexiGIS Synthetic Grid Node">
+                            <i class="fa-solid fa-map-location-dot text-teal-400 w-4 text-center"></i> <span class="text-sm">FlexiGIS Node</span>
+                        </div>
+                        <div class="component-item border-l-4 border-purple-400 flex items-center gap-3" draggable="true" data-type="electrolyzer" title="Power-to-Gas (Hydrogen) via TESPy">
+                            <i class="fa-solid fa-water text-purple-400 w-4 text-center"></i> <span class="text-sm">H2 Electrolyzer</span>
+                        </div>
+                    </div>
+                </details>
             </div>
 
-            <div>
-                <h2 class="text-xs uppercase text-gray-500 font-bold tracking-wider mb-3">Generators</h2>
-                <div class="space-y-2">
-                    <div class="component-item border-l-4 border-yellow-400" draggable="true" data-type="solar">
-                        <i class="fa-regular fa-sun text-yellow-400 w-5"></i> Solar PV
-                    </div>
-                    <div class="component-item border-l-4 border-blue-400" draggable="true" data-type="wind">
-                        <i class="fa-solid fa-wind text-blue-400 w-5"></i> Wind Turbine
-                    </div>
-                </div>
-            </div>
-
-            <div>
-                <h2 class="text-xs uppercase text-gray-500 font-bold tracking-wider mb-3">Loads & Storage</h2>
-                <div class="space-y-2">
-                    <div class="component-item border-l-4 border-red-400" draggable="true" data-type="load" title="Consumer Demand Profile">
-                        <i class="fa-solid fa-city text-red-400 w-5"></i> Urban Demand
-                    </div>
-                    <div class="component-item border-l-4 border-green-400" draggable="true" data-type="battery" title="Electrical Energy Storage">
-                        <i class="fa-solid fa-battery-half text-green-400 w-5"></i> Li-Ion Battery
-                    </div>
-                </div>
-            </div>
-
-            <div>
-                <h2 class="text-xs uppercase text-gray-500 font-bold tracking-wider mb-3">Sector Coupling & DLR Tools</h2>
-                <div class="space-y-2">
-                    <div class="component-item border-l-4 border-purple-400" draggable="true" data-type="electrolyzer" title="Power-to-Gas (Hydrogen)">
-                        <i class="fa-solid fa-water text-purple-400 w-5"></i> H2 Electrolyzer
-                    </div>
-                    <div class="component-item border-l-4 border-orange-400" draggable="true" data-type="heatpump" title="Power-to-Heat (TESPy/OEMOF.thermal)">
-                        <i class="fa-solid fa-fire-burner text-orange-400 w-5"></i> Heat Pump
-                    </div>
-                    <div class="component-item border-l-4 border-indigo-400" draggable="true" data-type="amiris" title="DLR AMIRIS Market Agent">
-                        <i class="fa-solid fa-money-bill-trend-up text-indigo-400 w-5"></i> Market Agent
-                    </div>
-                    <div class="component-item border-l-4 border-pink-400" draggable="true" data-type="mtress" title="DLR MTRESS Generic Node">
-                        <i class="fa-solid fa-cubes text-pink-400 w-5"></i> MTRESS Plant
-                    </div>
-                    <div class="component-item border-l-4 border-teal-400" draggable="true" data-type="flexigis" title="DLR FlexiGIS Synthetic Grid Node">
-                        <i class="fa-solid fa-map-location-dot text-teal-400 w-5"></i> FlexiGIS Node
-                    </div>
-                </div>
-            </div>
-
-            <div class="mt-auto pt-4 border-t border-gray-800">
-                <h2 class="text-xs uppercase text-gray-500 font-bold tracking-wider mb-3">Target Framework</h2>
-                <select id="frameworkSelect" class="w-full bg-panel border border-gray-700 text-sm rounded-lg p-2.5 focus:border-accent focus:ring-1 focus:ring-accent outline-none appearance-none cursor-pointer">
+            <div class="absolute bottom-0 w-full p-4 bg-dark/80 backdrop-blur-md border-t border-gray-800 z-20">
+                <h2 class="text-[10px] uppercase text-gray-500 font-bold tracking-wider mb-2">Target Framework Execution</h2>
+                <select id="frameworkSelect" class="w-full bg-panel border border-gray-700 text-sm rounded-lg p-2 focus:border-accent focus:ring-1 focus:ring-accent outline-none appearance-none cursor-pointer">
                     <option value="pypsa">PyPSA (Grid Optimization)</option>
                     <option value="oemof">OEMOF (Sector Coupling)</option>
                     <option value="fine">FINE (Investment Path)</option>
@@ -128,8 +167,8 @@
         </aside>
 
         <!-- Center Canvas -->
-        <main class="flex-1 relative bg-darker" id="canvas-container">
-            <div id="grid-background"></div>
+        <main class="flex-1 relative bg-transparent" id="canvas-container">
+            <div id="grid-background" class="absolute inset-0 opacity-20 pointer-events-none"></div>
             <svg id="canvas-svg" class="absolute inset-0 w-full h-full pointer-events-none z-0"></svg>
             <div id="canvas" class="absolute inset-0 w-full h-full overflow-hidden z-10">
                 <!-- Dropped nodes will appear here -->
@@ -141,23 +180,42 @@
         </main>
 
         <!-- Right Sidebar: Properties & Dashboard -->
-        <aside class="w-80 bg-dark border-l border-gray-800 flex flex-col shrink-0 z-10 transition-transform duration-300" id="right-sidebar">
+        <aside class="w-[360px] bg-dark/70 backdrop-blur-xl border-l border-gray-800 flex flex-col shrink-0 z-30 transition-transform duration-300 shadow-[-10px_0_20px_rgba(0,0,0,0.3)]" id="right-sidebar">
             
             <!-- Tabs -->
-            <div class="flex border-b border-gray-800">
-                <button class="flex-1 py-3 text-sm font-semibold border-b-2 border-accent text-accent" id="tab-properties">Properties</button>
-                <button class="flex-1 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-white" id="tab-results">Results</button>
+            <div class="flex border-b border-gray-800 bg-dark/40">
+                <button class="flex-1 py-3 text-sm font-semibold border-b-2 border-accent text-accent transition-colors" id="tab-properties">Properties</button>
+                <button class="flex-1 py-3 text-sm font-semibold border-b-2 border-transparent text-gray-500 hover:text-white transition-colors" id="tab-results">Results</button>
             </div>
 
             <!-- Properties Panel -->
-            <div id="panel-properties" class="p-4 overflow-y-auto flex-1 h-full">
-                <div class="text-center text-gray-500 mt-10" id="no-selection">
-                    Select a node to edit properties.
+            <div id="panel-properties" class="p-0 overflow-y-auto flex-1 h-full custom-scrollbar flex flex-col">
+                <div class="text-center text-gray-500 mt-20 px-6" id="no-selection">
+                    <i class="fa-solid fa-hand-pointer text-4xl mb-4 opacity-50 block"></i>
+                    Select a node on the canvas to configure its deep physical and economic properties.
                 </div>
-                <!-- Dynamic form injected by JS -->
-                <form id="properties-form" class="hidden space-y-4">
-                    <!-- Example inputs-->
-                </form>
+                
+                <!-- Dynamic Content Container -->
+                <div id="properties-content" class="hidden flex-col">
+                    <!-- Component Header & Description Data (Injected via JS) -->
+                    <div id="prop-header-area" class="p-5 border-b border-gray-800 bg-panel/30"></div>
+                    
+                    <!-- Forms & Time-Series -->
+                    <div class="p-5 space-y-6">
+                        <form id="properties-form" class="space-y-4"></form>
+                        
+                        <!-- Time Series Mini Chart Area -->
+                        <div class="bg-darker/60 rounded-lg p-4 border border-gray-700/50 hidden" id="ts-container">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-[11px] uppercase text-gray-400 font-bold tracking-wider"><i class="fa-solid fa-chart-line text-accent mr-1"></i> Time-Series Profile</h3>
+                                <button class="text-[10px] bg-panel hover:bg-gray-700 px-2 py-1 rounded text-white border border-gray-600 transition-colors"><i class="fa-solid fa-upload"></i> CSV</button>
+                            </div>
+                            <div class="h-[120px] w-full items-center justify-center flex relative">
+                                <canvas id="propertyChart" class="w-full h-full"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Results Panel -->

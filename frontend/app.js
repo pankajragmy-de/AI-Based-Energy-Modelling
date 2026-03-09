@@ -33,6 +33,22 @@ document.addEventListener('DOMContentLoaded', () => {
     let tempLine = null;
 
     let chartInstance = null;
+    let propChartInstance = null;
+
+    const COMPONENT_META = {
+        'node': { desc: 'Creates a standard electrical bus or region to which other components connect. Ensures power balance (sum of inputs = sum of outputs).' },
+        'solar': { desc: 'Solar Photovoltaic array. Generation depends on the selected meteorological time-series data (GHI, DNI).' },
+        'wind': { desc: 'Wind Turbine Generator. Converts wind speed time-series into electrical power based on a defined power curve.' },
+        'load': { desc: 'Urban electrical demand profile. Represents the inelastic consumption of consumers over time.' },
+        'battery': { desc: 'Lithium-Ion Battery Energy Storage System (BESS). Dispatches energy to maximize system value based on round-trip efficiency.' },
+        'electrolyzer': { desc: 'Power-to-Gas (PEM). Consumes electricity to produce Hydrogen. Often coupled with TESPy for detailed thermodynamic state modeling.' },
+        'mtress_hp': { desc: 'DLR MTRESS Air/Ground Source Heat Pump. Couples the electrical grid to the thermal grid using a dynamic Coefficient of Performance (COP).' },
+        'mtress_chp': { desc: 'DLR MTRESS Combined Heat and Power engine. Cogen plant that produces both electricity and usable heat from combustible fuels.' },
+        'mtress_tes': { desc: 'DLR MTRESS Thermal Energy Storage. A stratified hot water tank used to decouple heat generation from heat demand.' },
+        'mtress_st': { desc: 'DLR MTRESS Solar Thermal collector. Directly converts solar irradiance into thermal energy for district heating networks.' },
+        'amiris': { desc: 'DLR AMIRIS Market Agent. An agent-based model simulating the bidding behavior of this power plant on the day-ahead electricity exchange.' },
+        'flexigis': { desc: 'DLR FlexiGIS Node. Maps urban infrastructure to synthetic low-voltage grid topologies for detailed spatial distribution analysis.' }
+    };
 
     // === Initialization ===
     initDragAndDrop();
@@ -81,6 +97,33 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // === Commodity Port Definitions per Component Type ===
+    // Each port: { pos, side: 'top'|'bottom'|'left'|'right', commodity, label, dir: 'in'|'out' }
+    const COMPONENT_PORTS = {
+        'node':        [{ side:'left',   commodity:'elec',  label:'Electricity IN',  dir:'in'  }, { side:'right',  commodity:'elec',  label:'Electricity OUT', dir:'out' }],
+        'solar':       [{ side:'bottom', commodity:'elec',  label:'AC Power OUT',    dir:'out' }],
+        'wind':        [{ side:'bottom', commodity:'elec',  label:'AC Power OUT',    dir:'out' }],
+        'load':        [{ side:'top',    commodity:'elec',  label:'Electricity IN',  dir:'in'  }],
+        'battery':     [{ side:'left',   commodity:'elec',  label:'Charge IN',       dir:'in'  }, { side:'right',  commodity:'elec',  label:'Discharge OUT',   dir:'out' }],
+        'electrolyzer':[{ side:'left',   commodity:'elec',  label:'Electricity IN',  dir:'in'  }, { side:'top',    commodity:'water', label:'Water IN',         dir:'in'  }, { side:'right',  commodity:'h2',   label:'Hydrogen OUT', dir:'out' }, { side:'bottom', commodity:'heat', label:'Waste Heat OUT', dir:'out' }],
+        'mtress_hp':   [{ side:'left',   commodity:'elec',  label:'Electricity IN',  dir:'in'  }, { side:'bottom', commodity:'cool',  label:'Ambient Heat IN',  dir:'in'  }, { side:'right',  commodity:'heat',  label:'District Heat OUT', dir:'out' }],
+        'mtress_chp':  [{ side:'left',   commodity:'gas',   label:'Biogas IN',       dir:'in'  }, { side:'top',    commodity:'elec',  label:'Electricity OUT',  dir:'out' }, { side:'right',  commodity:'heat',  label:'Heat OUT',      dir:'out' }, { side:'bottom', commodity:'co2',  label:'CO₂ Exhaust',    dir:'out' }],
+        'mtress_tes':  [{ side:'left',   commodity:'heat',  label:'Heat IN',         dir:'in'  }, { side:'right',  commodity:'heat',  label:'Heat OUT',         dir:'out' }],
+        'mtress_st':   [{ side:'bottom', commodity:'heat',  label:'Thermal Energy OUT', dir:'out'}],
+        'amiris':      [{ side:'left',   commodity:'elec',  label:'Market Power IN', dir:'in'  }, { side:'right',  commodity:'elec',  label:'Market Power OUT', dir:'out' }],
+        'flexigis':    [{ side:'left',   commodity:'elec',  label:'Grid IN',         dir:'in'  }, { side:'right',  commodity:'elec',  label:'Grid OUT',         dir:'out' }],
+    };
+
+    const COMMODITY_COLOR = {
+        'elec':  { bg: '#FBBF24', label: 'Electricity' },
+        'heat':  { bg: '#F87171', label: 'Heat' },
+        'cool':  { bg: '#60A5FA', label: 'Ambient/Cool' },
+        'h2':    { bg: '#C084FC', label: 'Hydrogen' },
+        'gas':   { bg: '#34D399', label: 'Gas/Biogas' },
+        'water': { bg: '#67E8F9', label: 'Water' },
+        'co2':   { bg: '#9CA3AF', label: 'CO₂' },
+    };
+
     // === Canvas Core Logic ===
     function createNode(type, x, y) {
         if(emptyState) emptyState.style.display = 'none';
@@ -95,16 +138,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const el = document.createElement('div');
         el.className = `canvas-node ${getColorClass(type)}`;
         el.id = id;
-        el.style.left = `${x - 50}px`; // Center offset
-        el.style.top = `${y - 30}px`;
-        
+        el.style.left = `${x - 55}px`;
+        el.style.top = `${y - 35}px`;
+
+        // Build ports based on commodity definitions
+        const ports = COMPONENT_PORTS[type] || [
+            { side:'left', commodity:'elec', label:'IN', dir:'in' },
+            { side:'right', commodity:'elec', label:'OUT', dir:'out' }
+        ];
+        const portHtml = ports.map(p => {
+            const c = COMMODITY_COLOR[p.commodity] || { bg: '#9CA3AF', label: p.commodity };
+            return `<div class="port port-${p.side} commodity-port"
+                        style="background-color:${c.bg}; box-shadow: 0 0 6px ${c.bg};"
+                        data-node="${id}" data-pos="${p.side}" data-commodity="${p.commodity}" data-dir="${p.dir}"
+                        data-portlabel="${p.label}">
+                        <span class="port-tooltip">${p.label}<br><span style="color:${c.bg}; font-weight:700">${c.label}</span></span>
+                    </div>`;
+        }).join('');
+
+        const meta = COMPONENT_META[type] || { desc: '' };
         el.innerHTML = `
+            <div class="node-tooltip-popup">
+                <strong>${formatLabel(type)}</strong>
+                <p>${meta.desc}</p>
+            </div>
             <i class="${getIconClass(type)}"></i>
             <span class="label">${nodeObj.data.label}</span>
-            <div class="port top" data-node="${id}" data-pos="top"></div>
-            <div class="port bottom" data-node="${id}" data-pos="bottom"></div>
-            <div class="port left" data-node="${id}" data-pos="left"></div>
-            <div class="port right" data-node="${id}" data-pos="right"></div>
+            ${portHtml}
         `;
         
         // Node Dragging
@@ -264,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             selectedNodeId = null;
             noSelection.style.display = 'block';
-            propForm.style.display = 'none';
+            document.getElementById('properties-content').classList.add('hidden');
         }
     }
 
@@ -279,19 +339,34 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!_node) return;
         
         noSelection.style.display = 'none';
-        propForm.style.display = 'block';
+        document.getElementById('properties-content').classList.remove('hidden');
+        
+        // Header
+        const meta = COMPONENT_META[_node.type] || { desc: 'Generic system component.' };
+        document.getElementById('prop-header-area').innerHTML = `
+            <div class="flex items-center gap-3 mb-2">
+                <div class="${getColorClass(_node.type).replace('border-t-2', 'border-2')} w-10 h-10 rounded-lg bg-darker flex items-center justify-center">
+                    <i class="${getIconClass(_node.type)} text-lg"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-white text-lg">${formatLabel(_node.type)}</h3>
+                    <p class="text-[10px] text-accent uppercase tracking-widest font-mono">ID: ${_node.id}</p>
+                </div>
+            </div>
+            <p class="text-[11px] text-gray-400 mt-3 leading-relaxed border-l-2 border-gray-700 pl-2">${meta.desc}</p>
+        `;
         
         propForm.innerHTML = `
-            <div class="form-group">
-                <label>Component Name</label>
-                <input type="text" value="${_node.data.label}" id="prop_label">
+            <div class="space-y-1">
+                <label class="text-[10px] uppercase text-gray-500 font-bold tracking-wider">Node Name</label>
+                <input type="text" value="${_node.data.label}" id="prop_label" class="w-full bg-darker border border-gray-700/50 rounded p-2 text-sm text-white focus:border-accent focus:outline-none transition-colors">
             </div>
-            <div class="form-group">
-                <label>Capacity (MW)</label>
-                <input type="number" value="${_node.data.capacity}" id="prop_cap">
+            <div class="space-y-1">
+                <label class="text-[10px] uppercase text-gray-500 font-bold tracking-wider">Installed Capacity (MW)</label>
+                <input type="number" value="${_node.data.capacity}" id="prop_cap" class="w-full bg-darker border border-gray-700/50 rounded p-2 text-sm text-white focus:border-accent focus:outline-none transition-colors">
             </div>
-            <button type="button" class="w-full mt-4 bg-red-500/10 text-red-500 border border-red-500 hover:bg-red-500 hover:text-dark py-2 rounded-lg font-bold text-sm transition-colors" onclick="deleteObj('${_node.id}')">
-                Delete Node
+            <button type="button" class="w-full mt-4 bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white py-2.5 rounded font-bold text-xs transition-colors shadow-sm" onclick="deleteObj('${_node.id}')">
+                <i class="fa-solid fa-trash mr-1 text-xs"></i> Delete Node
             </button>
         `;
         
@@ -302,6 +377,55 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         document.getElementById('prop_cap').addEventListener('input', e => {
             _node.data.capacity = e.target.value;
+        });
+
+        // Time Series
+        document.getElementById('ts-container').classList.remove('hidden');
+        renderPropertyChart(_node.type);
+    }
+
+    function renderPropertyChart(type) {
+        const ctx = document.getElementById('propertyChart').getContext('2d');
+        if(propChartInstance) propChartInstance.destroy();
+        
+        // Generate random realistic-looking timeseries data
+        let points = [];
+        let val = 50;
+        for(let i=0; i<24; i++) {
+            if(type === 'solar' || type === 'mtress_st') {
+                val = (i > 6 && i < 18) ? Math.sin((i-6)*Math.PI/12) * 100 : 0;
+            } else if(type === 'load') {
+                val = 40 + Math.sin(i*Math.PI/12)*20 + Math.random()*10;
+            } else {
+                val += (Math.random() - 0.5) * 20;
+                val = Math.max(0, Math.min(100, val));
+            }
+            points.push(val);
+        }
+        
+        propChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+                datasets: [{
+                    data: points,
+                    borderColor: '#4FD1C5',
+                    backgroundColor: 'rgba(79, 209, 197, 0.2)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { display: false },
+                    y: { display: false, min: 0 }
+                }
+            }
         });
     }
 
@@ -427,9 +551,11 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'load': return 'City Demand';
             case 'battery': return 'BESS 100MWh';
             case 'electrolyzer': return 'H2 Electrolyzer';
-            case 'heatpump': return 'Thermal Heat Pump';
+            case 'mtress_hp': return 'MTRESS Heat Pump';
+            case 'mtress_chp': return 'MTRESS CHP Engine';
+            case 'mtress_tes': return 'MTRESS Thermal Storage';
+            case 'mtress_st': return 'MTRESS Solar Thermal';
             case 'amiris': return 'AMIRIS Market Agent';
-            case 'mtress': return 'MTRESS Energy Plant';
             case 'flexigis': return 'FlexiGIS GIS Node';
             default: return 'Component';
         }
@@ -437,11 +563,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function getColorClass(type) {
         if(type === 'solar' || type === 'wind') return 'border-t-2 border-t-yellow-400';
-        if(type === 'load' || type === 'battery') return 'border-t-2 border-t-red-400';
+        if(type === 'load' || type === 'battery') return 'border-t-2 border-t-green-400';
         if(type === 'electrolyzer') return 'border-t-2 border-t-purple-400';
-        if(type === 'heatpump') return 'border-t-2 border-t-orange-400';
+        if(type.startsWith('mtress')) return 'border-t-2 border-t-pink-400';
         if(type === 'amiris') return 'border-t-2 border-t-indigo-400';
-        if(type === 'mtress') return 'border-t-2 border-t-pink-400';
         if(type === 'flexigis') return 'border-t-2 border-t-teal-400';
         return 'border-t-2 border-t-gray-400';
     }
@@ -451,11 +576,13 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'solar': return 'fa-regular fa-sun text-yellow-400';
             case 'wind': return 'fa-solid fa-wind text-blue-400';
             case 'load': return 'fa-solid fa-city text-red-400';
-            case 'battery': return 'fa-solid fa-battery-full text-green-400';
+            case 'battery': return 'fa-solid fa-battery-half text-green-400';
             case 'electrolyzer': return 'fa-solid fa-water text-purple-400';
-            case 'heatpump': return 'fa-solid fa-fire-burner text-orange-400';
+            case 'mtress_hp': return 'fa-solid fa-fire-burner text-pink-400';
+            case 'mtress_chp': return 'fa-solid fa-industry text-pink-400';
+            case 'mtress_tes': return 'fa-solid fa-database text-pink-400';
+            case 'mtress_st': return 'fa-solid fa-solar-panel text-pink-400';
             case 'amiris': return 'fa-solid fa-money-bill-trend-up text-indigo-400';
-            case 'mtress': return 'fa-solid fa-cubes text-pink-400';
             case 'flexigis': return 'fa-solid fa-map-location-dot text-teal-400';
             default: return 'fa-solid fa-bolt text-accent';
         }
